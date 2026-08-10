@@ -1,0 +1,45 @@
+name: Data bijwerken
+
+on:
+  schedule:
+    # Elke dag om 06:20 UTC. De voorlopige OISST-reeks van NCEI loopt zo'n
+    # twee dagen achter, dus vaker ophalen levert niets nieuws op.
+    - cron: "20 6 * * *"
+  workflow_dispatch:
+    inputs:
+      full:
+        description: "Ook de klimatologie 1991-2020 opnieuw ophalen"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-data
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Reeksen ophalen bij NOAA
+        run: python scripts/fetch_sst.py ${{ inputs.full && '--full' || '' }}
+
+      - name: Committen als er iets veranderd is
+        run: |
+          if [ -z "$(git status --porcelain data)" ]; then
+            echo "Geen nieuwe dagen."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data
+          git commit -m "Data bijgewerkt tot $(date -u +%F)"
+          git push

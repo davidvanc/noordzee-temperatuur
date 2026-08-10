@@ -1,0 +1,247 @@
+/* Zeewatertemperatuur Noordzee
+   Kleuren komen uit een gevalideerd palet. De jaarlijnen zijn een ordinale
+   ramp in één tint (oudste jaar het zwakst, nieuwste het sterkst); het lopende
+   jaar krijgt een accentkleur zodat het uit de ramp springt. Beide modes zijn
+   apart gekozen, niet omgeklapt. */
+
+:root {
+  color-scheme: light;
+
+  --surface: #fcfcfb;
+  --plane: #f9f9f7;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --hairline: rgba(11, 11, 11, 0.1);
+
+  /* jaarramp, oudste -> nieuwste */
+  --y0: #86b6ef;
+  --y1: #5598e7;
+  --y2: #2a78d6;
+  --y3: #1c5cab;
+  --y4: #104281;
+  --accent: #eb6834;
+  --clim: #898781;
+
+  --radius: 10px;
+  --font: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --surface: #1a1a19;
+    --plane: #0d0d0d;
+    --ink: #ffffff;
+    --ink-2: #c3c2b7;
+    --muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --hairline: rgba(255, 255, 255, 0.1);
+
+    --y0: #184f95;
+    --y1: #256abf;
+    --y2: #3987e5;
+    --y3: #6da7ec;
+    --y4: #9ec5f4;
+    --accent: #d95926;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface: #1a1a19;
+  --plane: #0d0d0d;
+  --ink: #ffffff;
+  --ink-2: #c3c2b7;
+  --muted: #898781;
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --hairline: rgba(255, 255, 255, 0.1);
+
+  --y0: #184f95;
+  --y1: #256abf;
+  --y2: #3987e5;
+  --y3: #6da7ec;
+  --y4: #9ec5f4;
+  --accent: #d95926;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 0 1rem 3rem;
+  background: var(--plane);
+  color: var(--ink);
+  font-family: var(--font);
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+}
+
+.wrap { max-width: 62rem; margin: 0 auto; }
+
+/* ── kop ─────────────────────────────────────────────────────────────── */
+
+header { display: flex; align-items: flex-start; gap: 1rem; padding: 2rem 0 1.25rem; }
+header .titles { flex: 1; min-width: 0; }
+
+h1 { margin: 0; font-size: 1.5rem; letter-spacing: -0.01em; }
+.lede { margin: 0.3rem 0 0; color: var(--ink-2); font-size: 0.95rem; }
+
+.theme-toggle {
+  flex: none;
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  color: var(--ink-2);
+  border-radius: var(--radius);
+  padding: 0.45rem 0.7rem;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.theme-toggle:hover { color: var(--ink); }
+
+/* ── bedieningsrij ───────────────────────────────────────────────────── */
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.controls label { color: var(--ink-2); font-size: 0.85rem; }
+
+select, .ghost-btn {
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: var(--radius);
+  padding: 0.45rem 0.6rem;
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.ghost-btn { margin-left: auto; color: var(--ink-2); font-size: 0.85rem; }
+.ghost-btn:hover { color: var(--ink); }
+
+/* ── kaart met de grafiek ────────────────────────────────────────────── */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  padding: 1rem 1rem 0.75rem;
+}
+
+.headline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.15rem 0.9rem;
+  padding: 0.25rem 0.25rem 1rem;
+}
+.headline .figure { font-size: 2.5rem; font-weight: 650; letter-spacing: -0.02em; line-height: 1; }
+.headline .unit { font-size: 1.25rem; font-weight: 500; color: var(--ink-2); }
+.headline .context { color: var(--ink-2); font-size: 0.9rem; }
+.headline .delta { font-variant-numeric: tabular-nums; }
+
+.chart-holder { position: relative; }
+svg.chart { display: block; width: 100%; height: auto; touch-action: pan-y; }
+
+.grid-line { stroke: var(--grid); stroke-width: 1; }
+.axis-line { stroke: var(--axis); stroke-width: 1; }
+.tick-text { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.axis-title { fill: var(--muted); font-size: 11px; }
+
+.series { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.series.year { stroke-width: 1.75; }
+.series.current { stroke-width: 2.75; }
+.series.clim { stroke-width: 2; stroke-dasharray: 6 5; }
+
+.end-label { font-size: 11px; font-weight: 600; fill: var(--ink); }
+
+.crosshair { stroke: var(--axis); stroke-width: 1; }
+.hover-dot { stroke: var(--surface); stroke-width: 2; }
+
+/* ── legende ─────────────────────────────────────────────────────────── */
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+  padding: 0.85rem 0.25rem 0.35rem;
+  border-top: 1px solid var(--hairline);
+  margin-top: 0.5rem;
+}
+.legend button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 0;
+  background: none;
+  padding: 0.1rem 0;
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.legend button[aria-pressed="false"] { opacity: 0.4; }
+.legend button:hover { color: var(--ink); }
+.legend .swatch { width: 18px; height: 3px; border-radius: 2px; flex: none; }
+.legend .swatch.dashed {
+  height: 0;
+  border-top: 3px dashed var(--clim);
+  border-radius: 0;
+}
+
+/* ── tooltip ─────────────────────────────────────────────────────────── */
+
+.tooltip {
+  position: absolute;
+  pointer-events: none;
+  z-index: 2;
+  min-width: 9rem;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  padding: 0.5rem 0.6rem;
+  font-size: 0.82rem;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+.tooltip[data-show="1"] { opacity: 1; }
+.tooltip .tt-date { font-weight: 600; margin-bottom: 0.3rem; }
+.tooltip .tt-row { display: flex; align-items: center; gap: 0.45rem; }
+.tooltip .tt-row .swatch { width: 12px; height: 3px; border-radius: 2px; flex: none; }
+.tooltip .tt-row .lbl { color: var(--ink-2); }
+.tooltip .tt-row .val { margin-left: auto; font-variant-numeric: tabular-nums; }
+
+/* ── tabelweergave ───────────────────────────────────────────────────── */
+
+.table-wrap { overflow-x: auto; margin-top: 1rem; }
+table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
+caption { text-align: left; color: var(--ink-2); padding-bottom: 0.5rem; font-size: 0.85rem; }
+th, td { padding: 0.35rem 0.6rem; text-align: right; white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+thead th { color: var(--ink-2); font-weight: 600; border-bottom: 1px solid var(--axis); }
+tbody td { font-variant-numeric: tabular-nums; border-bottom: 1px solid var(--grid); }
+
+[hidden] { display: none !important; }
+
+footer { color: var(--muted); font-size: 0.8rem; padding-top: 1.25rem; }
+footer a { color: inherit; }
+
+.status { color: var(--ink-2); padding: 2rem 0.25rem; }
+
+@media (max-width: 34rem) {
+  h1 { font-size: 1.25rem; }
+  .headline .figure { font-size: 2rem; }
+  .card { padding: 0.75rem 0.65rem 0.5rem; }
+  .ghost-btn { margin-left: 0; }
+}

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zeewatertemperatuur Noordzee</title>
+<meta name="description" content="De zeewatertemperatuur van de Noordzee per dag, de laatste vijf jaar naast elkaar en vergeleken met het gemiddelde van 1991-2020.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='14'>🌊</text></svg>">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="titles">
+      <h1>Zeewatertemperatuur Noordzee</h1>
+      <p class="lede">Elke dag van het jaar, de laatste vijf jaar naast elkaar,
+        met het gemiddelde van 1991&ndash;2020 als grijze stippellijn.</p>
+    </div>
+    <button class="theme-toggle" id="theme" type="button" aria-label="Wissel tussen licht en donker">Donker</button>
+  </header>
+
+  <div class="controls">
+    <label for="plek">Plek</label>
+    <select id="plek"></select>
+    <button class="ghost-btn" id="toggle-table" type="button" aria-expanded="false">Toon tabel</button>
+  </div>
+
+  <p class="status" id="status">Gegevens laden&hellip;</p>
+
+  <main class="card" id="card" hidden>
+    <div class="headline">
+      <span class="figure" id="figure">&mdash;</span><span class="unit">&deg;C</span>
+      <span class="context" id="context"></span>
+    </div>
+
+    <div class="chart-holder" id="holder">
+      <svg class="chart" id="chart" viewBox="0 0 960 440" role="img"
+           aria-labelledby="chart-title" tabindex="0"></svg>
+      <div class="tooltip" id="tooltip" role="status" aria-live="off"></div>
+    </div>
+
+    <div class="legend" id="legend"></div>
+  </main>
+
+  <div class="table-wrap" id="table-wrap" hidden></div>
+
+  <footer>
+    <p id="bron"></p>
+    <p>Gemaakt met <a href="https://github.com/davidvanc/noordzee-temperatuur">noordzee-temperatuur</a>.
+      De cijfers zijn satelliet&shy;analyses van een roostercel van ongeveer
+      25&nbsp;bij&nbsp;25&nbsp;km, geen strandmeting.</p>
+  </footer>
+
+</div>
+<script src="assets/app.js"></script>
+</body>
+</html>
