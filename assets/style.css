@@ -165,7 +165,7 @@ svg.chart { display: block; width: 100%; height: auto; touch-action: pan-y; }
 
 .end-label { font-size: 11px; font-weight: 600; fill: var(--ink); }
 
-.crosshair { stroke: var(--axis); stroke-width: 1; }
+.hover-band { fill: var(--ink); opacity: 0.05; }
 .hover-dot { stroke: var(--surface); stroke-width: 2; }
 
 /* ── legende ─────────────────────────────────────────────────────────── */
@@ -231,6 +231,7 @@ th, td { padding: 0.35rem 0.6rem; text-align: right; white-space: nowrap; }
 th:first-child, td:first-child { text-align: left; }
 thead th { color: var(--ink-2); font-weight: 600; border-bottom: 1px solid var(--axis); }
 tbody td { font-variant-numeric: tabular-nums; border-bottom: 1px solid var(--grid); }
+.table-note { color: var(--muted); font-size: 0.8rem; margin: 0.5rem 0 0; }
 
 [hidden] { display: none !important; }
 

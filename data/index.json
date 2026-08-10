@@ -1,0 +1,66 @@
+{
+  "locations": [
+    {
+      "slug": "belgische-kust",
+      "name": "Belgische kust",
+      "sub": "voor Oostende",
+      "lat": 51.375,
+      "lon": 2.875
+    },
+    {
+      "slug": "zeeuwse-kust",
+      "name": "Zeeuwse kust",
+      "sub": "voor Westkapelle",
+      "lat": 51.625,
+      "lon": 3.375
+    },
+    {
+      "slug": "hollandse-kust",
+      "name": "Hollandse kust",
+      "sub": "voor Scheveningen",
+      "lat": 52.125,
+      "lon": 4.125
+    },
+    {
+      "slug": "waddenkust",
+      "name": "Waddenkust",
+      "sub": "voor Texel",
+      "lat": 53.125,
+      "lon": 4.375
+    },
+    {
+      "slug": "nauw-van-calais",
+      "name": "Nauw van Calais",
+      "sub": "tussen Calais en Dover",
+      "lat": 51.125,
+      "lon": 1.625
+    },
+    {
+      "slug": "doggersbank",
+      "name": "Doggersbank",
+      "sub": "centrale Noordzee",
+      "lat": 54.875,
+      "lon": 2.875
+    },
+    {
+      "slug": "noordelijke-noordzee",
+      "name": "Noordelijke Noordzee",
+      "sub": "ten oosten van Shetland",
+      "lat": 59.875,
+      "lon": 1.625
+    }
+  ],
+  "climatology_period": [
+    1991,
+    2020
+  ],
+  "years": [
+    2021,
+    2022,
+    2023,
+    2024,
+    2025,
+    2026
+  ],
+  "updated": "2026-08-10T07:05:35Z"
+}

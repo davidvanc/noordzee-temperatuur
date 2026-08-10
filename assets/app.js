@@ -1,11 +1,8 @@
 /* Zeewatertemperatuur Noordzee — grafiek zonder externe libraries.
-   Alle reeksen liggen op een vaste 366-daagse kalender, zodat 1 maart van een
-   schrikkeljaar boven 1 maart van een gewoon jaar valt. Niet-schrikkeljaren
-   hebben daardoor één gat op index 59; de lijn loopt daar gewoon door. */
+   De data zijn maandgemiddelden: twaalf punten per jaar. De lopende maand komt
+   uit de dagwaarden tot nu toe en wordt apart gemarkeerd, want een gemiddelde
+   over acht dagen is nog geen maandcijfer. */
 
-const DAYS = 366;
-const CUM = [0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335];
-const MONTH_LEN = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 const MONTH_SHORT = ["jan", "feb", "mrt", "apr", "mei", "jun",
                      "jul", "aug", "sep", "okt", "nov", "dec"];
 const MONTH_LONG = ["januari", "februari", "maart", "april", "mei", "juni",
@@ -13,38 +10,34 @@ const MONTH_LONG = ["januari", "februari", "maart", "april", "mei", "juni",
 /* Ordinale ramp: oudste jaar het zwakst, nieuwste het sterkst. */
 const RAMP = ["--y0", "--y1", "--y2", "--y3", "--y4"];
 
-const W = 960, H = 440;
+/* De grafiek wordt getekend in schermpixels, niet in een vaste viewBox die
+   meeschaalt: anders krimpen de maandlabels op een telefoon mee tot vier pixels
+   en is er niets meer te lezen. */
 const M = { t: 14, r: 56, b: 30, l: 42 };
-const IW = W - M.l - M.r;
-const IH = H - M.t - M.b;
+let W = 960, H = 420, IW = 862, IH = 376, BAND = IW / 12;
+
+function layout() {
+  const width = el("holder").clientWidth;
+  W = Math.max(300, Math.round(width || 960));
+  H = Math.round(Math.min(440, Math.max(250, W * 0.46)));
+  M.r = W < 520 ? 34 : 56;
+  IW = W - M.l - M.r;
+  IH = H - M.t - M.b;
+  BAND = IW / 12;
+}
 
 const el = (id) => document.getElementById(id);
 const nf1 = new Intl.NumberFormat("nl-BE", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 const state = { data: null, series: [], hidden: new Set(), scale: null, hover: null };
 
-/* ── hulpjes ─────────────────────────────────────────────────────────── */
+const escapeHtml = (s) => String(s).replace(/[&<>"]/g, (c) =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
-function monthOf(index) {
-  let m = 11;
-  while (m > 0 && index < CUM[m]) m--;
-  return m;
-}
-
-function dayLabel(index, long = false) {
-  const m = monthOf(index);
-  return `${index - CUM[m] + 1} ${long ? MONTH_LONG[m] : MONTH_SHORT[m]}`;
-}
-
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"]/g, (c) =>
-    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
-}
-
-function lastFilled(values) {
+const lastFilled = (values) => {
   for (let i = values.length - 1; i >= 0; i--) if (values[i] != null) return i;
   return -1;
-}
+};
 
 /* ── reeksen ─────────────────────────────────────────────────────────── */
 
@@ -55,13 +48,8 @@ function buildSeries(data) {
   const [from, to] = data.climatology.period;
 
   const out = [{
-    key: "clim",
-    label: `gemiddelde ${from}–${to}`,
-    short: "gemiddelde",
-    values: data.climatology.mean,
-    cls: "clim",
-    color: "var(--clim)",
-    dashed: true,
+    key: "clim", label: `gemiddelde ${from}–${to}`, short: "gemiddelde",
+    values: data.climatology.mean, cls: "clim", color: "var(--clim)", dashed: true,
   }];
 
   past.forEach((year, i) => {
@@ -83,6 +71,13 @@ function buildSeries(data) {
   return out;
 }
 
+/* De maand die nu loopt: wel tonen, maar apart markeren. */
+function isPartial(series, m) {
+  const p = state.data && state.data.partial;
+  return !!p && series.cls === "current" && p.month - 1 === m
+    && String(p.year) === series.short;
+}
+
 function niceScale(series) {
   let min = Infinity, max = -Infinity;
   for (const s of series) {
@@ -93,24 +88,18 @@ function niceScale(series) {
     }
   }
   if (!isFinite(min)) return { min: 0, max: 20, step: 5 };
-  const span = max - min;
-  const step = [0.5, 1, 2, 2.5, 5, 10].find((s) => span / s <= 7) ?? 10;
-  return {
-    min: Math.floor(min / step) * step,
-    max: Math.ceil(max / step) * step,
-    step,
-  };
+  const step = [0.5, 1, 2, 2.5, 5].find((s) => (max - min) / s <= 7) ?? 5;
+  return { min: Math.floor(min / step) * step, max: Math.ceil(max / step) * step, step };
 }
 
-const xAt = (i) => M.l + (i * IW) / (DAYS - 1);
+const xAt = (m) => M.l + (m + 0.5) * BAND;
 const yAt = (v) => M.t + ((state.scale.max - v) / (state.scale.max - state.scale.min)) * IH;
 
 function pathOf(values) {
   let d = "", pen = false;
-  for (let i = 0; i < DAYS; i++) {
-    const v = values[i];
-    if (v == null) continue;
-    d += `${pen ? "L" : "M"}${xAt(i).toFixed(1)} ${yAt(v).toFixed(1)}`;
+  for (let m = 0; m < 12; m++) {
+    if (values[m] == null) continue;
+    d += `${pen ? "L" : "M"}${xAt(m).toFixed(1)} ${yAt(values[m]).toFixed(1)}`;
     pen = true;
   }
   return d;
@@ -119,25 +108,29 @@ function pathOf(values) {
 /* ── tekenen ─────────────────────────────────────────────────────────── */
 
 function renderChart() {
+  layout();
+  el("chart").setAttribute("viewBox", `0 0 ${W} ${H}`);
   const visible = state.series.filter((s) => !state.hidden.has(s.key));
   state.scale = niceScale(state.series);
   const { min, max, step } = state.scale;
 
-  let svg = `<title id="chart-title">Zeewatertemperatuur per dag van het jaar, ` +
+  let svg = `<title id="chart-title">Maandgemiddelde zeewatertemperatuur, ` +
     `${escapeHtml(state.data.location.name)}</title>`;
 
   for (let v = min; v <= max + 1e-9; v += step) {
-    svg += `<line class="grid-line" x1="${M.l}" y1="${yAt(v).toFixed(1)}" ` +
-      `x2="${M.l + IW}" y2="${yAt(v).toFixed(1)}"/>` +
+    const y = yAt(v).toFixed(1);
+    svg += `<line class="grid-line" x1="${M.l}" y1="${y}" x2="${M.l + IW}" y2="${y}"/>` +
       `<text class="tick-text" x="${M.l - 8}" y="${(yAt(v) + 4).toFixed(1)}" ` +
       `text-anchor="end">${nf1.format(v)}</text>`;
   }
-  svg += `<text class="axis-title" x="${M.l - 8}" y="${M.t - 2}" text-anchor="end">&deg;C</text>`;
-  svg += `<line class="axis-line" x1="${M.l}" y1="${M.t + IH}" x2="${M.l + IW}" y2="${M.t + IH}"/>`;
+  svg += `<text class="axis-title" x="${M.l - 8}" y="${M.t - 2}" text-anchor="end">&deg;C</text>` +
+    `<line class="axis-line" x1="${M.l}" y1="${M.t + IH}" x2="${M.l + IW}" y2="${M.t + IH}"/>`;
 
+  // Op een smal scherm passen twaalf maandnamen niet naast elkaar.
+  const everyOther = BAND < 26;
   MONTH_SHORT.forEach((name, m) => {
-    const mid = xAt(CUM[m] + MONTH_LEN[m] / 2);
-    svg += `<text class="tick-text" x="${mid.toFixed(1)}" y="${M.t + IH + 18}" ` +
+    if (everyOther && m % 2 === 1) return;
+    svg += `<text class="tick-text" x="${xAt(m).toFixed(1)}" y="${M.t + IH + 18}" ` +
       `text-anchor="middle">${name}</text>`;
   });
 
@@ -145,49 +138,56 @@ function renderChart() {
     svg += `<path class="series ${s.cls}" d="${pathOf(s.values)}" stroke="${s.color}"/>`;
   }
 
-  // Het lopende jaar krijgt een naamlabel aan het uiteinde; de rest staat in
-  // de legende. Meer dan één direct label wordt een kluwen op deze schaal.
+  // Alleen het lopende jaar krijgt puntmarkeringen en een naamlabel; met zeven
+  // reeksen zou meer dan dat een kluwen worden. De rest staat in de legende.
   const current = visible.find((s) => s.cls === "current");
   if (current) {
-    const i = lastFilled(current.values);
-    if (i >= 0) {
-      svg += `<circle cx="${xAt(i).toFixed(1)}" cy="${yAt(current.values[i]).toFixed(1)}" ` +
-        `r="3.5" fill="${current.color}"/>` +
-        `<text class="end-label" x="${(xAt(i) + 7).toFixed(1)}" ` +
-        `y="${(yAt(current.values[i]) + 4).toFixed(1)}">${escapeHtml(current.short)}</text>`;
+    for (let m = 0; m < 12; m++) {
+      if (current.values[m] == null) continue;
+      const partial = isPartial(current, m);
+      svg += `<circle cx="${xAt(m).toFixed(1)}" cy="${yAt(current.values[m]).toFixed(1)}" ` +
+        `r="4" fill="${partial ? "var(--surface)" : current.color}" ` +
+        `stroke="${current.color}" stroke-width="2"/>`;
+    }
+    const last = lastFilled(current.values);
+    if (last >= 0) {
+      // Past het label niet meer rechts van het punt, zet het er dan links van.
+      const room = W - (xAt(last) + 9) >= 34;
+      svg += `<text class="end-label" x="${(xAt(last) + (room ? 9 : -9)).toFixed(1)}" ` +
+        `y="${(yAt(current.values[last]) + 4).toFixed(1)}" ` +
+        `text-anchor="${room ? "start" : "end"}">${escapeHtml(current.short)}</text>`;
     }
   }
 
-  svg += `<g id="hover"></g>`;
-  svg += `<rect x="${M.l}" y="${M.t}" width="${IW}" height="${IH}" fill="transparent"/>`;
+  svg += `<g id="hover"></g>` +
+    `<rect x="${M.l}" y="${M.t}" width="${IW}" height="${IH}" fill="transparent"/>`;
   el("chart").innerHTML = svg;
   if (state.hover != null) drawHover(state.hover);
 }
 
 function renderLegend() {
   el("legend").innerHTML = state.series.map((s) => {
-    const on = !state.hidden.has(s.key);
     const swatch = s.dashed
       ? `<span class="swatch dashed"></span>`
       : `<span class="swatch" style="background:${s.color}"></span>`;
-    return `<button type="button" data-key="${escapeHtml(s.key)}" aria-pressed="${on}">` +
-      `${swatch}${escapeHtml(s.label)}</button>`;
+    return `<button type="button" data-key="${escapeHtml(s.key)}" ` +
+      `aria-pressed="${!state.hidden.has(s.key)}">${swatch}${escapeHtml(s.label)}</button>`;
   }).join("");
 }
 
 /* ── aanwijzen ───────────────────────────────────────────────────────── */
 
-function drawHover(index) {
-  const visible = state.series.filter((s) => !state.hidden.has(s.key));
-  const rows = visible
-    .map((s) => ({ s, v: s.values[index] }))
+function drawHover(month) {
+  const rows = state.series
+    .filter((s) => !state.hidden.has(s.key))
+    .map((s) => ({ s, v: s.values[month] }))
     .filter((r) => r.v != null)
     .sort((a, b) => b.v - a.v);
 
-  let g = `<line class="crosshair" x1="${xAt(index).toFixed(1)}" y1="${M.t}" ` +
-    `x2="${xAt(index).toFixed(1)}" y2="${M.t + IH}"/>`;
+  let g = `<rect class="hover-band" x="${(M.l + month * BAND).toFixed(1)}" y="${M.t}" ` +
+    `width="${BAND.toFixed(1)}" height="${IH}"/>`;
   for (const { s, v } of rows) {
-    g += `<circle class="hover-dot" cx="${xAt(index).toFixed(1)}" cy="${yAt(v).toFixed(1)}" ` +
+    g += `<circle class="hover-dot" cx="${xAt(month).toFixed(1)}" cy="${yAt(v).toFixed(1)}" ` +
       `r="${s.cls === "current" ? 5 : 4}" fill="${s.color}"/>`;
   }
   const hover = el("chart").querySelector("#hover");
@@ -195,40 +195,43 @@ function drawHover(index) {
 
   const tip = el("tooltip");
   if (!rows.length) { tip.dataset.show = "0"; return; }
-  tip.innerHTML = `<div class="tt-date">${escapeHtml(dayLabel(index, true))}</div>` +
+  tip.innerHTML = `<div class="tt-date">${MONTH_LONG[month]}</div>` +
     rows.map(({ s, v }) => {
       const swatch = s.dashed
         ? `<span class="swatch" style="border-top:3px dashed var(--clim)"></span>`
         : `<span class="swatch" style="background:${s.color}"></span>`;
-      return `<div class="tt-row">${swatch}<span class="lbl">${escapeHtml(s.short)}</span>` +
+      return `<div class="tt-row">${swatch}<span class="lbl">${escapeHtml(s.short)}` +
+        `${isPartial(s, month) ? " (deels)" : ""}</span>` +
         `<span class="val">${nf1.format(v)} &deg;C</span></div>`;
     }).join("");
   tip.dataset.show = "1";
 
   const holder = el("holder").getBoundingClientRect();
-  const px = (xAt(index) / W) * holder.width;
-  const width = tip.offsetWidth;
-  tip.style.left = `${Math.max(0, Math.min(holder.width - width, px + 16))}px`;
+  const px = (xAt(month) / W) * holder.width;
+  tip.style.left = `${Math.max(0, Math.min(holder.width - tip.offsetWidth, px + 18))}px`;
   tip.style.top = "8px";
 }
 
-function indexFromEvent(ev) {
+function monthFromEvent(ev) {
   const r = el("chart").getBoundingClientRect();
   const px = ((ev.clientX - r.left) / r.width) * W;
-  const i = Math.round(((px - M.l) / IW) * (DAYS - 1));
-  return Math.max(0, Math.min(DAYS - 1, i));
+  return Math.max(0, Math.min(11, Math.floor((px - M.l) / BAND)));
 }
 
-function setHover(index) {
-  state.hover = index;
-  drawHover(index);
+function setHover(month) {
+  state.hover = month;
+  drawHover(month);
 }
 
 function clearHover() {
   state.hover = null;
   const hover = el("chart").querySelector("#hover");
   if (hover) hover.innerHTML = "";
-  el("tooltip").dataset.show = "0";
+  const tip = el("tooltip");
+  tip.dataset.show = "0";
+  // Terug naar links: een verstopte tooltip die op zijn oude plek blijft staan
+  // rekt de pagina op zodra het venster smaller wordt.
+  tip.style.left = "0px";
 }
 
 /* ── kop en tabel ────────────────────────────────────────────────────── */
@@ -236,33 +239,28 @@ function clearHover() {
 function renderHeadline() {
   const current = state.series.find((s) => s.cls === "current");
   const clim = state.series.find((s) => s.key === "clim");
-  const i = current ? lastFilled(current.values) : -1;
-  if (i < 0) {
+  const m = current ? lastFilled(current.values) : -1;
+  if (m < 0) {
     el("figure").textContent = "—";
-    el("context").textContent = "nog geen meting voor dit jaar";
+    el("context").textContent = "nog geen cijfers voor dit jaar";
     return;
   }
-  const value = current.values[i];
+  const value = current.values[m];
   el("figure").textContent = nf1.format(value);
 
-  const normal = clim ? clim.values[i] : null;
-  let text = `op ${dayLabel(i, true)} ${current.short} · ${state.data.location.name}`;
+  const partial = isPartial(current, m)
+    ? ` (eerste ${state.data.partial.days} dagen)` : "";
+  let text = `${MONTH_LONG[m]} ${current.short}${partial} · ${state.data.location.name}`;
+
+  const normal = clim ? clim.values[m] : null;
   if (normal != null) {
     const d = value - normal;
     const word = Math.abs(d) < 0.05 ? "gelijk aan"
       : `${nf1.format(Math.abs(d))} °C ${d > 0 ? "boven" : "onder"}`;
-    text += ` · <span class="delta">${word} ` +
-      `het gemiddelde van ${state.data.climatology.period.join("–")}</span>`;
+    text += ` · <span class="delta">${word} het gemiddelde van ` +
+      `${state.data.climatology.period.join("–")}</span>`;
   }
   el("context").innerHTML = text;
-}
-
-function monthlyMean(values, m) {
-  let sum = 0, n = 0;
-  for (let i = CUM[m]; i < CUM[m] + MONTH_LEN[m]; i++) {
-    if (values[i] != null) { sum += values[i]; n++; }
-  }
-  return n ? sum / n : null;
 }
 
 function renderTable() {
@@ -273,11 +271,12 @@ function renderTable() {
     `</tr></thead><tbody>`;
   MONTH_LONG.forEach((name, m) => {
     html += `<tr><th scope="row">${name}</th>` + cols.map((s) => {
-      const v = monthlyMean(s.values, m);
-      return `<td>${v == null ? "–" : nf1.format(v)}</td>`;
+      const v = s.values[m];
+      return `<td>${v == null ? "–" : nf1.format(v) + (isPartial(s, m) ? "*" : "")}</td>`;
     }).join("") + `</tr>`;
   });
-  el("table-wrap").innerHTML = html + `</tbody></table>`;
+  el("table-wrap").innerHTML = html + `</tbody></table>` +
+    `<p class="table-note">* maand nog niet voorbij; gemiddelde over de dagen tot nu toe.</p>`;
 }
 
 /* ── laden ───────────────────────────────────────────────────────────── */
@@ -290,30 +289,32 @@ async function load(slug) {
   state.hidden.clear();
   clearHover();
 
+  // Eerst tonen, dan tekenen: de grafiek meet de breedte van zijn container,
+  // en een verborgen element is nul pixels breed.
+  el("status").hidden = true;
+  el("card").hidden = false;
+
   renderHeadline();
   renderChart();
   renderLegend();
   renderTable();
 
   const s = state.data.source;
-  const stamp = new Date(state.data.updated).toLocaleString("nl-BE",
-    { dateStyle: "long", timeStyle: "short" });
+  const stamp = new Date(state.data.updated)
+    .toLocaleString("nl-BE", { dateStyle: "long", timeStyle: "short" });
   el("bron").innerHTML =
     `Bron: ${escapeHtml(s.dataset)}, ${escapeHtml(s.grid)} ` +
     `(${escapeHtml(s.recent)}; ${escapeHtml(s.climatology)}). ` +
     `Roostercel ${nf1.format(state.data.location.lat)}&deg;N ` +
     `${nf1.format(state.data.location.lon)}&deg;O. Bijgewerkt ${escapeHtml(stamp)}.`;
-
-  el("status").hidden = true;
-  el("card").hidden = false;
 }
 
 async function init() {
   const index = await (await fetch("data/index.json", { cache: "no-cache" })).json();
   const select = el("plek");
-  select.innerHTML = index.locations
-    .map((l) => `<option value="${escapeHtml(l.slug)}">${escapeHtml(l.name)} — ${escapeHtml(l.sub)}</option>`)
-    .join("");
+  select.innerHTML = index.locations.map((l) =>
+    `<option value="${escapeHtml(l.slug)}">${escapeHtml(l.name)} — ${escapeHtml(l.sub)}</option>`
+  ).join("");
 
   const wanted = new URLSearchParams(location.search).get("plek");
   const start = index.locations.some((l) => l.slug === wanted) ? wanted : index.locations[0].slug;
@@ -336,18 +337,21 @@ async function init() {
   });
 
   const chart = el("chart");
-  chart.addEventListener("pointermove", (ev) => setHover(indexFromEvent(ev)));
-  chart.addEventListener("pointerdown", (ev) => setHover(indexFromEvent(ev)));
+  chart.addEventListener("pointermove", (ev) => setHover(monthFromEvent(ev)));
+  chart.addEventListener("pointerdown", (ev) => setHover(monthFromEvent(ev)));
   chart.addEventListener("pointerleave", clearHover);
+  chart.addEventListener("blur", clearHover);
   chart.addEventListener("keydown", (ev) => {
     const step = ev.key === "ArrowLeft" ? -1 : ev.key === "ArrowRight" ? 1 : 0;
     if (!step) return;
     ev.preventDefault();
-    const base = state.hover ?? Math.round(DAYS / 2);
-    setHover(Math.max(0, Math.min(DAYS - 1, base + step * (ev.shiftKey ? 7 : 1))));
+    setHover(Math.max(0, Math.min(11, (state.hover ?? 0) + step)));
   });
-  chart.addEventListener("blur", clearHover);
-  addEventListener("resize", () => { if (state.hover != null) drawHover(state.hover); });
+  let resizeTimer;
+  addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => { clearHover(); renderChart(); }, 120);
+  });
 
   const table = el("table-wrap"), toggle = el("toggle-table");
   toggle.addEventListener("click", () => {
@@ -365,10 +369,8 @@ async function init() {
   };
   const saved = (() => { try { return localStorage.getItem("thema"); } catch { return null; } })();
   apply(saved ?? (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"));
-  theme.addEventListener("click", () => {
-    apply(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
-    renderChart();
-  });
+  theme.addEventListener("click", () =>
+    apply(document.documentElement.dataset.theme === "dark" ? "light" : "dark"));
 
   await load(start);
 }

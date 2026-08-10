@@ -6,11 +6,6 @@ on:
     # twee dagen achter, dus vaker ophalen levert niets nieuws op.
     - cron: "20 6 * * *"
   workflow_dispatch:
-    inputs:
-      full:
-        description: "Ook de klimatologie 1991-2020 opnieuw ophalen"
-        type: boolean
-        default: false
 
 permissions:
   contents: write
@@ -30,7 +25,7 @@ jobs:
           python-version: "3.12"
 
       - name: Reeksen ophalen bij NOAA
-        run: python scripts/fetch_sst.py ${{ inputs.full && '--full' || '' }}
+        run: python scripts/fetch_sst.py
 
       - name: Committen als er iets veranderd is
         run: |

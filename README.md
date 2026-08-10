@@ -1,32 +1,35 @@
 # Noordzee-temperatuur
 
-De zeewatertemperatuur van de Noordzee, dag per dag. De laatste vijf jaar
-liggen als gekleurde lijnen over elkaar, met het daggemiddelde van 1991–2020
-als grijze stippellijn ernaast, zodat je meteen ziet of een jaar warm of koud
+De zeewatertemperatuur van de Noordzee per maand. De laatste vijf jaar liggen
+als gekleurde lijnen over elkaar, met het maandgemiddelde van 1991–2020 als
+grijze stippellijn ernaast, zodat je meteen ziet of een jaar warm of koud
 uitvalt.
 
 Statische site, geen build-stap, geen dependencies. De data staat als JSON in
-[`data/`](data/) en wordt elke ochtend door een GitHub Action ververst.
+[`data/`](data/) — een kleine kilobyte per plek — en wordt elke ochtend door
+een GitHub Action ververst.
 
 ## Bron
 
 Overal NOAA **OISST v2.1** (Optimum Interpolation SST) — een satelliet­analyse
-op een rooster van 0,25° (ongeveer 25 bij 25 km), één waarde per dag. Dat is
-open water, geen strandmeting: aan de kust ligt de echte temperatuur in de
-zomer meestal wat hoger en in de winter wat lager.
+op een rooster van 0,25°, ongeveer 25 bij 25 km. Dat is open water, geen
+strandmeting: aan de kust ligt de echte temperatuur in de zomer meestal wat
+hoger en in de winter wat lager.
 
-De cijfers komen van twee servers, omdat geen van beide alles levert:
+NOAA publiceert de maandgemiddelden kant-en-klaar, dus die halen we op in
+plaats van tweeduizend dagwaarden zelf te middelen:
 
 | Wat | Waar vandaan |
 |---|---|
-| De gekleurde jaarlijnen | [NCEI ERDDAP](https://www.ncei.noaa.gov/erddap/) — archief vanaf eind februari 2020, plus de `preliminary`-dataset voor de laatste weken |
-| De grijze stippellijn | [NOAA PSL](https://psl.noaa.gov/data/gridded/data.noaa.oisst.v2.highres.html) — NOAA's eigen daggemiddelde over 1991–2020 |
+| De gekleurde jaarlijnen | `sst.mon.mean.nc` op [NOAA PSL](https://psl.noaa.gov/data/gridded/data.noaa.oisst.v2.highres.html) — maandgemiddelden vanaf september 1981 |
+| De grijze stippellijn | `sst.mon.ltm.1991-2020.nc` — het maandnormaal over 1991–2020 |
+| De maand die nu loopt | [NCEI ERDDAP](https://www.ncei.noaa.gov/erddap/), dagwaarden tot nu toe, apart gemarkeerd als onvolledig |
 
-Beide servers rekenen per **dag**, niet per roostercel: één cel over 30 dagen
-duurt even lang als 432 cellen over 30 dagen. Het script haalt daarom in één
-keer een rechthoek op die alle locaties omvat en knipt die lokaal uit — zeven
-keer sneller dan punt voor punt. De PSL-proxy geeft bovendien een 502 op grote
-requests, dus die reeks gaat er in stukken van 92 dagen door.
+De OPeNDAP-server rekent per **tijdstap**, niet per roostercel: één cel over
+twaalf maanden duurt even lang als 432 cellen over twaalf maanden. Het script
+haalt daarom in één keer een rechthoek op die alle locaties omvat en knipt die
+lokaal uit — zeven keer sneller dan punt voor punt. De proxy geeft wel een 502
+op te grote requests, dus de reeks gaat er in stukken van 36 stappen door.
 
 ## Plekken
 
@@ -46,12 +49,11 @@ Alleen Python 3.12 of nieuwer, geen pip-pakketten.
 
 ```bash
 python scripts/fetch_sst.py --probe   # controleer of de punten op zee liggen
-python scripts/fetch_sst.py --full    # alles ophalen, inclusief klimatologie
-python scripts/fetch_sst.py           # alleen het lopende jaar verversen
+python scripts/fetch_sst.py           # alles ophalen
 ```
 
-De klimatologie verandert niet en staat in de repo; `--full` is dus eenmalig.
-De dagelijkse Action draait zonder vlag en haalt alleen het lopende jaar op.
+Eén volledige ronde duurt ongeveer een halve minuut, dus de dagelijkse Action
+haalt gewoon alles opnieuw op en commit alleen als er iets veranderd is.
 
 Site lokaal bekijken:
 
