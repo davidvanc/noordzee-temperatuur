@@ -236,6 +236,25 @@ def running_month(first_of_month: date) -> tuple[dict[Cell, float], int]:
 
 # ── opbouw ───────────────────────────────────────────────────────────────────
 
+def write_if_changed(path: Path, payload: dict, text: str) -> None:
+    """Schrijft alleen als de cijfers zelf veranderd zijn.
+
+    Het veld `updated` verschilt per definitie elke run. Zou dat meetellen, dan
+    zou de dagelijkse workflow elke dag een commit maken zonder nieuws.
+    """
+    if path.exists():
+        try:
+            old = json.loads(path.read_text("utf-8"))
+        except json.JSONDecodeError:
+            old = None
+        if isinstance(old, dict) and {k: v for k, v in old.items() if k != "updated"} \
+                == {k: v for k, v in payload.items() if k != "updated"}:
+            print(f"  {path.name} ongewijzigd", flush=True)
+            return
+    path.write_text(text + "\n", encoding="utf-8", newline="\n")
+    print(f"  {path.name} ({path.stat().st_size} bytes)", flush=True)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--probe", action="store_true", help="alleen de punten controleren")
@@ -310,21 +329,18 @@ def main() -> int:
             "partial": partial,
             "updated": stamp,
         }
-        path = DATA_DIR / f"{loc['slug']}.json"
-        path.write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + "\n",
-                        encoding="utf-8")
-        print(f"  {path.name} ({path.stat().st_size} bytes)", flush=True)
+        write_if_changed(DATA_DIR / f"{loc['slug']}.json", payload,
+                         json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
 
-    (DATA_DIR / "index.json").write_text(
-        json.dumps({
-            "locations": [{k: l[k] for k in ("slug", "name", "sub", "lat", "lon")}
-                          for l in LOCATIONS],
-            "climatology_period": CLIM_PERIOD,
-            "years": years,
-            "updated": stamp,
-        }, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8")
-    print("  index.json")
+    index = {
+        "locations": [{k: l[k] for k in ("slug", "name", "sub", "lat", "lon")}
+                      for l in LOCATIONS],
+        "climatology_period": CLIM_PERIOD,
+        "years": years,
+        "updated": stamp,
+    }
+    write_if_changed(DATA_DIR / "index.json", index,
+                     json.dumps(index, ensure_ascii=False, indent=2))
     return 0
 
 
