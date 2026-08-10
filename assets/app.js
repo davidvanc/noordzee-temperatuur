@@ -303,8 +303,8 @@ async function load(slug) {
   const stamp = new Date(state.data.updated)
     .toLocaleString("nl-BE", { dateStyle: "long", timeStyle: "short" });
   el("bron").innerHTML =
-    `Bron: ${escapeHtml(s.dataset)}, ${escapeHtml(s.grid)} ` +
-    `(${escapeHtml(s.recent)}; ${escapeHtml(s.climatology)}). ` +
+    `Bron: ${escapeHtml(s.dataset)} &mdash; ${escapeHtml(s.detail)}, ` +
+    `via ${escapeHtml(s.via)}. ` +
     `Roostercel ${nf1.format(state.data.location.lat)}&deg;N ` +
     `${nf1.format(state.data.location.lon)}&deg;O. Bijgewerkt ${escapeHtml(stamp)}.`;
 }

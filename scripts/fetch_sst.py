@@ -317,9 +317,8 @@ def main() -> int:
             "location": {k: loc[k] for k in ("slug", "name", "sub", "lat", "lon")},
             "source": {
                 "dataset": "NOAA OISST v2.1 (AVHRR)",
-                "grid": "0,25° · maandgemiddelden",
-                "recent": "NOAA PSL",
-                "climatology": "NOAA PSL, maandnormaal 1991-2020",
+                "detail": "maandgemiddelden op een rooster van 0,25°",
+                "via": "NOAA PSL, met de lopende maand uit NCEI ERDDAP",
             },
             "climatology": {
                 "period": CLIM_PERIOD,
