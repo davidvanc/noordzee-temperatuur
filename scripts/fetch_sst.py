@@ -157,10 +157,17 @@ def erddap_box(dataset: str, start: date, end: date) -> dict[tuple[int, int], di
 def recent_days(years: list[int]) -> dict[tuple[int, int], dict[date, float]]:
     """Dagwaarden voor alle cellen over de gevraagde jaren, definitief + voorlopig."""
     f_start, f_end = erddap_coverage(DS_FINAL)
-    start = max(f_start, date(min(years), 1, 1))
-    end = min(f_end, date(max(years), 12, 31))
-    print(f"  ERDDAP definitief {start} t/m {end}", flush=True)
-    cells = erddap_box(DS_FINAL, start, end)
+    # Jaar per jaar: zes jaar in één request is een antwoord van tientallen
+    # megabytes, en dan is een halve download een verloren kwartier.
+    cells: dict[tuple[int, int], dict[date, float]] = {}
+    for year in years:
+        start = max(f_start, date(year, 1, 1))
+        end = min(f_end, date(year, 12, 31))
+        if start > end:
+            continue
+        print(f"  ERDDAP definitief {start} t/m {end}", flush=True)
+        for key, days in erddap_box(DS_FINAL, start, end).items():
+            cells.setdefault(key, {}).update(days)
 
     # De definitieve reeks loopt zo'n twee weken achter; de voorlopige dataset
     # vult het gat tot gisteren.
