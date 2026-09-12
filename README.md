@@ -6,7 +6,7 @@ grijze stippellijn ernaast, zodat je meteen ziet of een jaar warm of koud
 uitvalt.
 
 Statische site, geen build-stap, geen dependencies. De data staat als JSON in
-[`data/`](data/) — een kleine kilobyte per plek — en wordt elke ochtend door
+[`data/`](data/) — een kleine kilobyte per plek — en wordt elke maandagochtend door
 een GitHub Action ververst.
 
 ## Bron

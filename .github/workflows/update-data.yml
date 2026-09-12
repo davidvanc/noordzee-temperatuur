@@ -2,9 +2,10 @@ name: Data bijwerken
 
 on:
   schedule:
-    # Elke dag om 06:20 UTC. De voorlopige OISST-reeks van NCEI loopt zo'n
-    # twee dagen achter, dus vaker ophalen levert niets nieuws op.
-    - cron: "20 6 * * *"
+    # Elke maandag om 06:20 UTC. De gekleurde jaarlijnen zijn maandgemiddelden
+    # en veranderen maar een keer per maand; alleen de lopende maand kruipt er
+    # dagelijks bij, en die mag gerust een week achterlopen.
+    - cron: "20 6 * * 1"
   workflow_dispatch:
 
 permissions:
